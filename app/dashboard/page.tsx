@@ -79,6 +79,7 @@ export default function Dashboard() {
     batchSize: 50
   })
   const [emailStatuses, setEmailStatuses] = useState<Record<string, 'success' | 'error'>>({})
+  const [preferServerData, setPreferServerData] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export default function Dashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.json())
-        .then(data => { setServerData(data.items); setTotalServer(data.total) })
+        .then(data => { setServerData(data.items); setTotalServer(data.total); setPreferServerData(true) })
         .catch(() => {})
     } catch (err) {
       console.warn('Cannot decode JWT token payload')
@@ -144,6 +145,8 @@ export default function Dashboard() {
           setServerData(payload.items || [])
           setTotalServer(payload.total || 0)
           setServerPage(1)
+          setPreferServerData(true)
+          setExcelData([])
         }
       }
     } catch (e) {
@@ -361,6 +364,18 @@ export default function Dashboard() {
 
   const handleDelaySettingsChange = (settings: DelaySettingsType) => {
     setDelaySettings(settings)
+  }
+
+  const refreshRecipients = async (page: number, pageSize = serverPageSize) => {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`/api/recipients?page=${page}&pageSize=${pageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    setServerData(data.items || [])
+    setTotalServer(data.total || 0)
+    setServerPage(page)
+    return data
   }
 
   // Fetch recipients when search query changes (debounce light)
@@ -650,7 +665,7 @@ export default function Dashboard() {
                     <Space>
                       <FileExcelOutlined className="text-green-600" />
                       <span className="font-medium">Dữ liệu từ Excel</span>
-                      <Badge count={excelData.length} showZero color="green" />
+              <Badge count={preferServerData ? totalServer : excelData.length} showZero color="green" />
                     </Space>
                     <div className="w-full sm:w-auto flex flex-col gap-2">
                       <Input
@@ -678,14 +693,19 @@ export default function Dashboard() {
                             const token = localStorage.getItem('token')
                             const ids = selectedRowKeys.filter(k => typeof k === 'string') as string[]
                             if (ids.length === 0) return
-                            await fetch('/api/recipients/bulk-delete', {
+                            const resp = await fetch('/api/recipients/bulk-delete', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                               body: JSON.stringify({ ids })
                             })
-                            fetch(`/api/recipients?page=${serverPage}&pageSize=${serverPageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`, {
-                              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                            }).then(res => res.json()).then(data => { setServerData(data.items); setTotalServer(data.total); setSelectedRowKeys([]) })
+                            setSelectedRowKeys([])
+                            // Tải lại đúng trang; nếu trang trống thì lùi về trang trước
+                            const data = await refreshRecipients(serverPage)
+                            setPreferServerData(true)
+                            if ((data.items?.length || 0) === 0 && serverPage > 1) {
+                              await refreshRecipients(serverPage - 1)
+                            }
+                            
                             message.success('Đã xóa các mục đã chọn')
                           }}
                           okText="Xóa"
@@ -707,9 +727,9 @@ export default function Dashboard() {
                 style={{ marginTop: 10 }}
                 styles={{ body: { padding: '14px' } }}
               >
-                <Table
+                 <Table
                   columns={columns}
-                  dataSource={(serverData.length > 0 ? serverData : excelData).map((item, index) => ({ ...item, key: item._id || index }))}
+                  dataSource={(preferServerData ? serverData : excelData).map((item, index) => ({ ...item, key: item._id || index }))}
                   rowSelection={{
                     selectedRowKeys,
                     onChange: handleSelectionChange,
@@ -719,26 +739,22 @@ export default function Dashboard() {
                   }}
                   scroll={{ x: 800, y: 400 }}
                   locale={{ emptyText: 'Không có dữ liệu' }}
-                  pagination={{
+                   pagination={{
                     current: serverPage,
                     pageSize: serverPageSize,
                     total: serverData.length > 0 ? totalServer : excelData.length,
                     showSizeChanger: true,
-                    pageSizeOptions: [10, 20, 50, 100],
+                     pageSizeOptions: [10, 20, 50, 100, 200],
                     showQuickJumper: false,
                     showTotal: (total, range) =>
                       `${range[0]}-${range[1]} / ${total}`,
                     size: 'small',
                     responsive: true,
-                    onChange: (page, pageSize) => {
+                    onChange: async (page, pageSize) => {
                       setServerPage(page)
                       setServerPageSize(pageSize)
-                      fetch(`/api/recipients?page=${page}&pageSize=${pageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`, {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                      })
-                        .then(res => res.json())
-                        .then(data => { setServerData(data.items); setTotalServer(data.total) })
-                        .catch(() => {})
+                      await refreshRecipients(page, pageSize)
+                      setPreferServerData(true)
                     }
                   }}
                   size="middle"
