@@ -547,7 +547,7 @@ export default function Dashboard() {
               <MailOutlined className="text-orange-600 text-lg sm:text-2xl" />
             </div>
             <div className="leading-tight">
-              <div className="text-white font-semibold text-base sm:text-lg">Email Sender</div>
+              <div className="text-white font-semibold text-base sm:text-lg">Email App</div>
               <div className="text-blue-100 text-xs sm:text-sm">Dashboard</div>
             </div>
           </div>
@@ -643,8 +643,7 @@ export default function Dashboard() {
                       </Col>
                     </Row>
 
-                                {/* Data Table */}
-            {(serverData.length > 0 || excelData.length > 0) && (
+                      {/* Data Table */}
               <Card
                 title={
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -705,8 +704,8 @@ export default function Dashboard() {
                   </div>
                 }
                 className="mt-8 shadow-lg"
-                style={{ marginTop: 24 }}
-                styles={{ body: { padding: '24px' } }}
+                style={{ marginTop: 10 }}
+                styles={{ body: { padding: '14px' } }}
               >
                 <Table
                   columns={columns}
@@ -719,6 +718,7 @@ export default function Dashboard() {
                     }),
                   }}
                   scroll={{ x: 800, y: 400 }}
+                  locale={{ emptyText: 'Không có dữ liệu' }}
                   pagination={{
                     current: serverPage,
                     pageSize: serverPageSize,
@@ -746,7 +746,6 @@ export default function Dashboard() {
                   className="mobile-table spaced-table"
                 />
               </Card>
-            )}
                   </div>
                 ),
               },

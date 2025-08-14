@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 import jwt from 'jsonwebtoken'
 import connectDB from '../../../../lib/mongodb'
+// Khởi động scheduler reset quota hàng ngày (chỉ khởi động một lần)
+import '../../../../lib/quotaScheduler'
 import EmailConfig from '../../../../models/EmailConfig'
 import EmailHistory from '../../../../models/EmailHistory'
 import SendJob from '../../../../models/SendJob'
@@ -91,6 +93,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Kiểm tra giới hạn quota gửi trong ngày
+    const dailyLimit = (emailConfig as any).dailyLimit ?? 500
+    const dailySent = (emailConfig as any).dailySent ?? 0
+    const remainingQuota = Math.max(0, dailyLimit - dailySent)
+
+    if (remainingQuota <= 0) {
+      return NextResponse.json(
+        { message: `Cấu hình email \"${emailConfig.displayName}\" đã hết lượt gửi hôm nay (0/${dailyLimit}). Vui lòng đợi đến 00:00 để tiếp tục.` },
+        { status: 429 }
+      )
+    }
+
     let transporter
 
     // Cấu hình transporter dựa trên email config của user
@@ -116,8 +130,12 @@ export async function POST(request: NextRequest) {
 
     const results: any[] = []
 
-    // Gửi email cho từng người nhận
-    for (const recipient of recipients) {
+    // Cắt bớt danh sách người nhận theo quota còn lại
+    const recipientsToSend = Array.isArray(recipients) ? recipients.slice(0, remainingQuota) : []
+    const trimmed = recipientsToSend.length < (recipients?.length || 0)
+
+    // Gửi email cho từng người nhận trong quota
+    for (const recipient of recipientsToSend) {
       try {
         // Thay thế biến trong template
         const personalizedSubject = replaceVariables(subject, recipient)
@@ -143,6 +161,16 @@ export async function POST(request: NextRequest) {
           error: error instanceof Error ? error.message : 'Unknown error',
         })
       }
+    }
+
+    // Ghi nhận số lượt đã dùng trong ngày
+    try {
+      await EmailConfig.updateOne(
+        { _id: (emailConfig as any)._id },
+        { $inc: { dailySent: recipientsToSend.length } }
+      )
+    } catch (e) {
+      console.warn('Increase dailySent failed:', e)
     }
 
     // Lưu lịch sử
@@ -178,7 +206,16 @@ export async function POST(request: NextRequest) {
       console.warn('Save send job failed:', e)
     }
 
-    return NextResponse.json({ message: 'Gửi email hoàn tất', results })
+    return NextResponse.json({ 
+      message: 'Gửi email hoàn tất', 
+      results,
+      quota: {
+        limit: dailyLimit,
+        used: Math.min(dailySent + recipientsToSend.length, dailyLimit),
+        remaining: Math.max(0, dailyLimit - (dailySent + recipientsToSend.length))
+      },
+      trimmed
+    })
 
   } catch (error) {
     console.error('Send email error:', error)

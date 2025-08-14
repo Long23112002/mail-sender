@@ -36,6 +36,8 @@ interface EmailConfig {
   displayName: string
   isDefault: boolean
   isActive: boolean
+  dailyLimit?: number
+  dailySent?: number
 }
 
 interface EmailConfigManagerProps {
@@ -172,6 +174,27 @@ export default function EmailConfigManager({ onConfigChange }: EmailConfigManage
         renderItem={(config) => (
           <List.Item
             actions={[
+              // <Button
+              //   key="reset"
+              //   size="small"
+              //   onClick={async () => {
+              //     try {
+              //       const token = localStorage.getItem('token')
+              //       await fetch('/api/email-config/reset-quota', {
+              //         method: 'POST',
+              //         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              //         body: JSON.stringify({ configId: config._id })
+              //       })
+              //       message.success('Đã reset lượt gửi về 0')
+              //       fetchConfigs()
+              //       onConfigChange?.()
+              //     } catch {
+              //       message.error('Reset quota thất bại')
+              //     }
+              //   }}
+              // >
+              //   Reset quota
+              // </Button>,
               <Button
                 key="edit"
                 type="text"
@@ -214,6 +237,10 @@ export default function EmailConfigManager({ onConfigChange }: EmailConfigManage
                   <br />
                   <Text type="secondary" className="text-xs">
                     Trạng thái: {config.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                  </Text>
+                  <br />
+                  <Text type="secondary" className="text-xs">
+                    Số lượt hôm nay: {Math.min(config.dailySent ?? 0, config.dailyLimit ?? 500)} / {config.dailyLimit ?? 500}
                   </Text>
                 </div>
               }

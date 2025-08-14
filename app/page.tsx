@@ -41,7 +41,7 @@ export default function Home() {
                 Đăng nhập
               </Title>
               <Text type="secondary" className="text-base">
-                Email Sender Application
+                Email Application
               </Text>
             </div>
             

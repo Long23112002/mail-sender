@@ -11,6 +11,9 @@ export interface IEmailConfig extends Document {
   isActive: boolean
   smtpHost?: string
   smtpPort?: number
+  // Quota fields
+  dailyLimit: number
+  dailySent: number
   createdAt: Date
   updatedAt: Date
 }
@@ -55,6 +58,17 @@ const EmailConfigSchema = new Schema<IEmailConfig>({
   },
   smtpPort: {
     type: Number
+  },
+  // Daily quota (mặc định 500/ngày)
+  dailyLimit: {
+    type: Number,
+    default: 500,
+    min: 0
+  },
+  dailySent: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 }, {
   timestamps: true

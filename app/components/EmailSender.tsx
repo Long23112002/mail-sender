@@ -64,6 +64,7 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
   const [results, setResults] = useState<any[]>([])
   const [emailConfigs, setEmailConfigs] = useState<any[]>([])
   const [loadingConfigs, setLoadingConfigs] = useState(false)
+  const [selectedConfig, setSelectedConfig] = useState<any | null>(null)
   const [currentBatch, setCurrentBatch] = useState(0)
   const [totalBatches, setTotalBatches] = useState(0)
   const [sendingProgress, setSendingProgress] = useState('')
@@ -102,6 +103,13 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
       const stop = () => { canceled = true }
       registerStopHandler?.(jobId, stop)
       
+      // helper: cập nhật quota UI sau mỗi request
+      const applyQuotaUpdate = (quota: any, configId: string) => {
+        if (!quota) return
+        setSelectedConfig(prev => (prev && (prev._id === configId)) ? { ...prev, dailyLimit: quota.limit, dailySent: quota.used } : prev)
+        setEmailConfigs(prev => prev.map(cfg => cfg._id === configId ? { ...cfg, dailyLimit: quota.limit, dailySent: quota.used } : cfg))
+      }
+
       // Kiểm tra delay settings
       if (delaySettings?.enabled) {
         // Gửi theo batch với delay
@@ -140,6 +148,10 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
             allResults = [...allResults, ...data.results]
             setResults(allResults)
             onHistoryProgress?.(jobId, data.results)
+            applyQuotaUpdate(data.quota, values.emailConfigId)
+            if (data.trimmed) {
+              message.info('Một phần danh sách đã bị giới hạn bởi quota trong ngày')
+            }
           } else {
             message.error(`Lỗi ở batch ${i + 1}: ${data.message}`)
           }
@@ -174,6 +186,10 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
           allResults = data.results
           setResults(allResults)
           onHistoryProgress?.(jobId, data.results)
+          applyQuotaUpdate(data.quota, values.emailConfigId)
+          if (data.trimmed) {
+            message.info('Một phần danh sách đã bị giới hạn bởi quota trong ngày')
+          }
         } else {
           message.error(data.message || 'Có lỗi xảy ra khi gửi email')
         }
@@ -271,6 +287,7 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
         const defaultConfig = data.configs.find((config: any) => config.isDefault)
         if (defaultConfig) {
           form.setFieldsValue({ emailConfigId: defaultConfig._id })
+          setSelectedConfig(defaultConfig)
         }
       }
     } catch (error) {
@@ -320,6 +337,10 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
             placeholder="Chọn cấu hình email"
             loading={loadingConfigs}
             className="w-full"
+            onChange={(val) => {
+              const cfg = emailConfigs.find(cfg => cfg._id === val)
+              setSelectedConfig(cfg || null)
+            }}
             notFoundContent={emailConfigs.length === 0 ? "Chưa có cấu hình email. Vui lòng thêm trong tab Cấu hình." : "Không tìm thấy"}
           >
             {emailConfigs.map((config: any) => (
@@ -329,6 +350,9 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
                   <span className="text-sm">{config.displayName}</span>
                   <Text type="secondary" className="text-xs hidden sm:inline">({config.email})</Text>
                   {config.isDefault && <Tag color="blue">Mặc định</Tag>}
+                  <Tag color={(config.dailySent ?? 0) < (config.dailyLimit ?? 500) ? 'green' : 'red'}>
+                    Đã gửi {(config.dailySent ?? 0)}/{config.dailyLimit ?? 500}
+                  </Tag>
                 </Space>
               </Select.Option>
             ))}
