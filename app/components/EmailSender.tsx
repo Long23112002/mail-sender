@@ -106,8 +106,8 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
       // helper: cập nhật quota UI sau mỗi request
       const applyQuotaUpdate = (quota: any, configId: string) => {
         if (!quota) return
-        setSelectedConfig(prev => (prev && (prev._id === configId)) ? { ...prev, dailyLimit: quota.limit, dailySent: quota.used } : prev)
-        setEmailConfigs(prev => prev.map(cfg => cfg._id === configId ? { ...cfg, dailyLimit: quota.limit, dailySent: quota.used } : cfg))
+        setSelectedConfig((prev: any | null) => (prev && (prev._id === configId)) ? { ...prev, dailyLimit: quota.limit, dailySent: quota.used } : prev)
+        setEmailConfigs((prev: any[]) => prev.map((cfg: any) => cfg._id === configId ? { ...cfg, dailyLimit: quota.limit, dailySent: quota.used } : cfg))
       }
 
       // Kiểm tra delay settings
