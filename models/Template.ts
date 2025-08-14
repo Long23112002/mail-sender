@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose'
+import '@/models/User'
 
 export interface ITemplate extends Document {
   name: string
