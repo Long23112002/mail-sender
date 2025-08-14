@@ -347,6 +347,8 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
 	                  template: template.content
 	                })
 	                setTemplateHtml(template.content)
+                // Cập nhật ngay cho parent để nút preview dùng được luôn
+                onTemplateChange?.(template.content, template.subject)
 	                message.success(`Đã áp dụng template: ${template.name}`)
 	              }
 	            }}
