@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    container_name: email-sender-app
+    restart: unless-stopped
+    ports:
+      - "7626:7626"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb+srv://longjava2024:Java2024%40%40@cluster0.cb22hdu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=8f9d2c93dbe1f42d779f0a14b3f7a6c0f74ac1c7b89d18d0b3b6e1a7f2c8d9e4
+      - NEXTAUTH_URL=http://localhost:7626
+      - NEXTAUTH_SECRET=7LwG4D7P4XyeF9tx0SRH9vMdpX7C2rQdn0rP6J9EwqY=
+
+volumes:
+  mongo_data:

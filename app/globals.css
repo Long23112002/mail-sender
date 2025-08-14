@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-colors;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+.input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
+}
+
+.card {
+  @apply bg-white rounded-lg shadow-md p-6;
+}
+
+/* Mobile Responsive Classes */
+@media (max-width: 640px) {
+  /* Mobile tabs */
+  .mobile-tabs .ant-tabs-tab {
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+  }
+  
+  .mobile-tabs .ant-tabs-tab-btn {
+    margin: 0 !important;
+  }
+  
+  /* Mobile table */
+  .mobile-table .ant-table-thead > tr > th {
+    padding: 8px 4px !important;
+    font-size: 12px !important;
+  }
+  
+  .mobile-table .ant-table-tbody > tr > td {
+    padding: 8px 4px !important;
+    font-size: 12px !important;
+  }
+  
+  /* Mobile list */
+  .mobile-list .ant-list-item {
+    padding: 12px 0 !important;
+  }
+  
+  .mobile-list .ant-list-item-action {
+    margin-left: 0 !important;
+    margin-top: 8px !important;
+  }
+  
+  .mobile-list .ant-list-item-action > li {
+    padding: 0 4px !important;
+  }
+  
+  /* Mobile form */
+  .mobile-form .ant-form-item {
+    margin-bottom: 16px !important;
+  }
+  
+  .mobile-form .ant-form-item-label {
+    padding-bottom: 4px !important;
+  }
+  
+  .mobile-form .ant-form-item-label > label {
+    font-size: 14px !important;
+  }
+  
+  /* Hide long text on mobile */
+  .mobile-hide {
+    display: none !important;
+  }
+  
+  /* Responsive gutters */
+  .ant-row.sm\:gutter-24 {
+    margin-left: -8px !important;
+    margin-right: -8px !important;
+  }
+  
+  .ant-row.sm\:gutter-24 > .ant-col {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .mobile-tabs .ant-tabs-tab {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+  
+  .mobile-table .ant-table-thead > tr > th,
+  .mobile-table .ant-table-tbody > tr > td {
+    padding: 6px 2px !important;
+    font-size: 11px !important;
+  }
+}
