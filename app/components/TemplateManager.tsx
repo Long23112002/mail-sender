@@ -47,12 +47,25 @@ interface TemplateManagerProps {
 
 export default function TemplateManager({ onSelectTemplate, sampleData, onTemplatesChanged }: TemplateManagerProps) {
   const [templates, setTemplates] = useState<Template[]>([])
+  const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([])
+  const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'public' | 'private'>('all')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
   const [form] = Form.useForm()
+
+  // Filter templates based on visibility
+  useEffect(() => {
+    if (visibilityFilter === 'all') {
+      setFilteredTemplates(templates)
+    } else if (visibilityFilter === 'public') {
+      setFilteredTemplates(templates.filter(t => t.isPublic))
+    } else if (visibilityFilter === 'private') {
+      setFilteredTemplates(templates.filter(t => !t.isPublic))
+    }
+  }, [templates, visibilityFilter])
 
   // Function to replace variables for preview (only use real data if available)
   const replaceVariablesForPreview = (template: string) => {
@@ -202,6 +215,10 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
       })
     } else {
       form.resetFields()
+      // Mặc định template mới là private
+      form.setFieldsValue({
+        isPublic: false
+      })
     }
     setModalOpen(true)
   }
@@ -214,9 +231,45 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
   return (
     <div className="w-full max-w-full overflow-hidden">
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-4">
-        <Text strong className="text-base sm:text-lg whitespace-nowrap">
-          Template Library
-        </Text>
+        <div className="flex flex-col gap-2">
+          <Text strong className="text-base sm:text-lg whitespace-nowrap">
+            Template Library
+          </Text>
+          
+          {/* Filter Controls */}
+          <div className="flex items-center gap-2">
+            <Text className="text-sm text-gray-600">Lọc theo:</Text>
+            <div className="flex gap-1">
+              <Button
+                size="small"
+                type={visibilityFilter === 'all' ? 'primary' : 'default'}
+                onClick={() => setVisibilityFilter('all')}
+                className="text-xs px-2"
+              >
+                Tất cả
+              </Button>
+              <Button
+                size="small"
+                type={visibilityFilter === 'public' ? 'primary' : 'default'}
+                onClick={() => setVisibilityFilter('public')}
+                className="text-xs px-2"
+                icon={<GlobalOutlined />}
+              >
+                Public
+              </Button>
+              <Button
+                size="small"
+                type={visibilityFilter === 'private' ? 'primary' : 'default'}
+                onClick={() => setVisibilityFilter('private')}
+                className="text-xs px-2"
+                icon={<LockOutlined />}
+              >
+                Private
+              </Button>
+            </div>
+          </div>
+        </div>
+        
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -230,9 +283,24 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
 
       <List
         loading={loading}
-        dataSource={templates}
+        dataSource={filteredTemplates}
         size="small"
         className="w-full"
+        locale={{
+          emptyText: (
+            <div className="text-center py-8">
+              <FileTextOutlined className="text-4xl text-gray-300 mb-2" />
+              <div className="text-gray-500">
+                {visibilityFilter === 'all' 
+                  ? 'Chưa có template nào' 
+                  : visibilityFilter === 'public' 
+                    ? 'Không có template public nào' 
+                    : 'Không có template private nào'
+                }
+              </div>
+            </div>
+          )
+        }}
         renderItem={(template) => (
           <List.Item
             className="!flex-col !items-start w-full p-3 sm:p-4"
@@ -409,7 +477,20 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
           </Form.Item>
 
           <Form.Item name="isPublic" label="Công khai" valuePropName="checked">
-            <Switch checkedChildren="Public" unCheckedChildren="Private" />
+            <Switch 
+              checkedChildren={
+                <span className="flex items-center gap-1">
+                  <GlobalOutlined />
+                  Public
+                </span>
+              } 
+              unCheckedChildren={
+                <span className="flex items-center gap-1">
+                  <LockOutlined />
+                  Private
+                </span>
+              }
+            />
           </Form.Item>
 
           <Form.Item className="mb-0">
