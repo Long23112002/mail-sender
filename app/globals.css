@@ -63,6 +63,57 @@ body {
     font-size: 12px !important;
   }
   
+  /* Mobile pagination - ensure full display on mobile */
+  .mobile-table .ant-pagination {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-top: 16px !important;
+  }
+  
+  .mobile-table .ant-pagination-total-text {
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important;
+    margin-bottom: 8px !important;
+    font-size: 14px !important;
+  }
+  
+  .mobile-table .ant-pagination-options {
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important;
+    margin-top: 8px !important;
+  }
+  
+  .mobile-table .ant-pagination-options-size-changer {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  
+  .mobile-table .ant-pagination-options-size-changer .ant-select {
+    min-width: 80px !important;
+  }
+  
+  .mobile-table .ant-pagination-prev,
+  .mobile-table .ant-pagination-next,
+  .mobile-table .ant-pagination-item {
+    min-width: 32px !important;
+    height: 32px !important;
+    line-height: 30px !important;
+    font-size: 14px !important;
+  }
+  
+  .mobile-table .ant-pagination-jump-prev,
+  .mobile-table .ant-pagination-jump-next {
+    min-width: 32px !important;
+    height: 32px !important;
+    line-height: 30px !important;
+  }
+  
   /* Mobile list */
   .mobile-list .ant-list-item {
     padding: 12px 0 !important;

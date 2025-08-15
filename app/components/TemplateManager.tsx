@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import apiClient from "../../lib/apiClient"
 import dynamic from "next/dynamic"
 import { List, Button, Modal, Form, Input, Switch, Tag, Popconfirm, message, Typography, Divider } from "antd"
 import {
@@ -135,16 +136,9 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
   const fetchTemplates = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch("/api/templates", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setTemplates(data.templates)
+      const response = await apiClient.get("/api/templates")
+      if (response.data) {
+        setTemplates(response.data.templates)
       } else {
         message.error("Không thể tải danh sách template")
       }
@@ -157,24 +151,18 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
 
   const handleSaveTemplate = async (values: any) => {
     try {
-      const token = localStorage.getItem("token")
-      const url = editingTemplate ? `/api/templates/${editingTemplate._id}` : "/api/templates"
+      const response = await (editingTemplate 
+        ? apiClient.put(`/api/templates/${editingTemplate._id}`, {
+            ...values,
+            tags: values.tags ? values.tags.split(",").map((tag: string) => tag.trim()) : [],
+          })
+        : apiClient.post("/api/templates", {
+            ...values,
+            tags: values.tags ? values.tags.split(",").map((tag: string) => tag.trim()) : [],
+          })
+      )
 
-      const method = editingTemplate ? "PUT" : "POST"
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...values,
-          tags: values.tags ? values.tags.split(",").map((tag: string) => tag.trim()) : [],
-        }),
-      })
-
-      if (response.ok) {
+      if (response.data) {
         message.success(editingTemplate ? "Cập nhật template thành công" : "Tạo template thành công")
         setModalOpen(false)
         setEditingTemplate(null)
@@ -182,8 +170,7 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
         fetchTemplates()
         onTemplatesChanged?.()
       } else {
-        const data = await response.json()
-        message.error(data.message || "Có lỗi xảy ra")
+        message.error(response.error || "Có lỗi xảy ra")
       }
     } catch (error) {
       message.error("Có lỗi xảy ra khi lưu template")
@@ -192,21 +179,14 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
 
   const handleDeleteTemplate = async (templateId: string) => {
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch(`/api/templates/${templateId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await apiClient.delete(`/api/templates/${templateId}`)
 
-      if (response.ok) {
+      if (response.data) {
         message.success("Xóa template thành công")
         fetchTemplates()
         onTemplatesChanged?.()
       } else {
-        const data = await response.json()
-        message.error(data.message || "Có lỗi xảy ra")
+        message.error(response.error || "Có lỗi xảy ra")
       }
     } catch (error) {
       message.error("Có lỗi xảy ra khi xóa template")

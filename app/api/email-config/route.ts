@@ -1,22 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
 import connectDB from '../../../lib/mongodb'
 import EmailConfig from '../../../models/EmailConfig'
-
-// Hàm xác thực token
-function verifyToken(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader) {
-    throw new Error('Token không được cung cấp')
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  try {
-    return jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
-  } catch (error) {
-    throw new Error('Token không hợp lệ')
-  }
-}
+import { verifyToken, handleAuthError } from '../../../lib/auth'
 
 // GET - Lấy danh sách email configs của user
 export async function GET(request: NextRequest) {
@@ -32,11 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ configs })
 
   } catch (error) {
-    console.error('Get email configs error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Có lỗi xảy ra' },
-      { status: 500 }
-    )
+    return handleAuthError(error)
   }
 }
 
@@ -110,10 +91,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Create email config error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Có lỗi xảy ra' },
-      { status: 500 }
-    )
+    return handleAuthError(error)
   }
 }

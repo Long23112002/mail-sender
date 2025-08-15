@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import apiClient from '../../lib/apiClient'
 import {
   Card,
   List,
@@ -58,16 +59,9 @@ export default function EmailConfigManager({ onConfigChange }: EmailConfigManage
   const fetchConfigs = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/email-config', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setConfigs(data.configs)
+      const response = await apiClient.get('/api/email-config')
+      if (response.data) {
+        setConfigs(response.data.configs)
       } else {
         message.error('Không thể tải danh sách cấu hình email')
       }
@@ -80,23 +74,14 @@ export default function EmailConfigManager({ onConfigChange }: EmailConfigManage
 
   const handleSaveConfig = async (values: any) => {
     try {
-      const token = localStorage.getItem('token')
-      const url = editingConfig
-        ? `/api/email-config/${editingConfig._id}`
-        : '/api/email-config'
+      let response
+      if (editingConfig) {
+        response = await apiClient.put(`/api/email-config/${editingConfig._id}`, values)
+      } else {
+        response = await apiClient.post('/api/email-config', values)
+      }
 
-      const method = editingConfig ? 'PUT' : 'POST'
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(values),
-      })
-
-      if (response.ok) {
+      if (response.data) {
         message.success(editingConfig ? 'Cập nhật cấu hình thành công' : 'Thêm cấu hình thành công')
         setModalOpen(false)
         setEditingConfig(null)
@@ -104,8 +89,7 @@ export default function EmailConfigManager({ onConfigChange }: EmailConfigManage
         fetchConfigs()
         onConfigChange?.()
       } else {
-        const data = await response.json()
-        message.error(data.message || 'Có lỗi xảy ra')
+        message.error(response.error || 'Có lỗi xảy ra')
       }
     } catch (error) {
       message.error('Có lỗi xảy ra khi lưu cấu hình')
@@ -114,21 +98,14 @@ export default function EmailConfigManager({ onConfigChange }: EmailConfigManage
 
   const handleDeleteConfig = async (configId: string) => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/email-config/${configId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
+      const response = await apiClient.delete(`/api/email-config/${configId}`)
 
-      if (response.ok) {
+      if (response.data) {
         message.success('Xóa cấu hình thành công')
         fetchConfigs()
         onConfigChange?.()
       } else {
-        const data = await response.json()
-        message.error(data.message || 'Có lỗi xảy ra')
+        message.error(response.error || 'Có lỗi xảy ra')
       }
     } catch (error) {
       message.error('Có lỗi xảy ra khi xóa cấu hình')

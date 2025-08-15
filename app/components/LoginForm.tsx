@@ -37,6 +37,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
       if (response.ok) {
         localStorage.setItem('token', data.token)
+        localStorage.setItem('refreshToken', data.refreshToken)
         message.success('Đăng nhập thành công!')
         onLogin()
         router.push('/dashboard')

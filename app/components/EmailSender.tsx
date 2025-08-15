@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import apiClient from '../../lib/apiClient'
 import { 
   Form, 
   Select, 
@@ -128,32 +129,23 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
           setSendingProgress(`Đang gửi batch ${i + 1}/${batches.length} (${batches[i].length} email)...`)
           
           if (canceled) break
-          const response = await fetch('/api/email/send', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              emailConfigId: values.emailConfigId,
-              recipients: batches[i],
-              subject: values.subject,
-              template: values.template,
-            }),
+          const response = await apiClient.post('/api/email/send', {
+            emailConfigId: values.emailConfigId,
+            recipients: batches[i],
+            subject: values.subject,
+            template: values.template,
           })
 
-          const data = await response.json()
-          
-          if (response.ok) {
-            allResults = [...allResults, ...data.results]
+          if (response.data) {
+            allResults = [...allResults, ...response.data.results]
             setResults(allResults)
-            onHistoryProgress?.(jobId, data.results)
-            applyQuotaUpdate(data.quota, values.emailConfigId)
-            if (data.trimmed) {
+            onHistoryProgress?.(jobId, response.data.results)
+            applyQuotaUpdate(response.data.quota, values.emailConfigId)
+            if (response.data.trimmed) {
               message.info('Một phần danh sách đã bị giới hạn bởi quota trong ngày')
             }
           } else {
-            message.error(`Lỗi ở batch ${i + 1}: ${data.message}`)
+            message.error(`Lỗi ở batch ${i + 1}: ${response.error || 'Unknown error'}`)
           }
           
           // Delay giữa các batch (trừ batch cuối)
@@ -166,32 +158,23 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
         // Gửi tất cả cùng lúc (không delay)
         setSendingProgress('Đang gửi tất cả email...')
         
-        const response = await fetch('/api/email/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            emailConfigId: values.emailConfigId,
-            recipients: dataToSend,
-            subject: values.subject,
-            template: values.template,
-          }),
+        const response = await apiClient.post('/api/email/send', {
+          emailConfigId: values.emailConfigId,
+          recipients: dataToSend,
+          subject: values.subject,
+          template: values.template,
         })
 
-        const data = await response.json()
-        
-        if (response.ok) {
-          allResults = data.results
+        if (response.data) {
+          allResults = response.data.results
           setResults(allResults)
-          onHistoryProgress?.(jobId, data.results)
-          applyQuotaUpdate(data.quota, values.emailConfigId)
-          if (data.trimmed) {
+          onHistoryProgress?.(jobId, response.data.results)
+          applyQuotaUpdate(response.data.quota, values.emailConfigId)
+          if (response.data.trimmed) {
             message.info('Một phần danh sách đã bị giới hạn bởi quota trong ngày')
           }
         } else {
-          message.error(data.message || 'Có lỗi xảy ra khi gửi email')
+          message.error(response.error || 'Có lỗi xảy ra khi gửi email')
         }
       }
 
@@ -272,19 +255,13 @@ export default function EmailSender({ excelData, selectedTemplate, onTemplateCha
   const fetchEmailConfigs = async () => {
     setLoadingConfigs(true)
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/email-config', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
+      const response = await apiClient.get('/api/email-config')
 
-      if (response.ok) {
-        const data = await response.json()
-        setEmailConfigs(data.configs)
+      if (response.data) {
+        setEmailConfigs(response.data.configs)
         
         // Set default config if available
-        const defaultConfig = data.configs.find((config: any) => config.isDefault)
+        const defaultConfig = response.data.configs.find((config: any) => config.isDefault)
         if (defaultConfig) {
           form.setFieldsValue({ emailConfigId: defaultConfig._id })
           setSelectedConfig(defaultConfig)

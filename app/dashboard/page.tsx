@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import apiClient from '../../lib/apiClient'
 import { 
   Layout, 
   Card, 
@@ -102,11 +103,14 @@ export default function Dashboard() {
         role: decoded.role || 'user',
       })
       // fetch recipients initial
-      fetch(`/api/recipients?page=1&pageSize=${serverPageSize}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => { setServerData(data.items); setTotalServer(data.total); setPreferServerData(true) })
+      apiClient.get(`/api/recipients?page=1&pageSize=${serverPageSize}`)
+        .then(response => {
+          if (response.data) {
+            setServerData(response.data.items)
+            setTotalServer(response.data.total)
+            setPreferServerData(true)
+          }
+        })
         .catch(() => {})
     } catch (err) {
       console.warn('Cannot decode JWT token payload')
@@ -115,6 +119,7 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
     router.push('/')
   }
 
@@ -123,27 +128,15 @@ export default function Dashboard() {
     setEmailStatuses({})
 
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-      const res = await fetch('/api/recipients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ rows: data }),
-      })
-      if (res.ok) {
+      const res = await apiClient.post('/api/recipients', { rows: data })
+      if (res.data) {
         // Reload recipients from server immediately so table updates without F5
         const params = new URLSearchParams({ page: '1', pageSize: String(serverPageSize) })
         if (searchQ) params.set('q', searchQ)
-        const list = await fetch(`/api/recipients?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (list.ok) {
-          const payload = await list.json()
-          setServerData(payload.items || [])
-          setTotalServer(payload.total || 0)
+        const list = await apiClient.get(`/api/recipients?${params.toString()}`)
+        if (list.data) {
+          setServerData(list.data.items || [])
+          setTotalServer(list.data.total || 0)
           setServerPage(1)
           setPreferServerData(true)
           setExcelData([])
@@ -269,16 +262,20 @@ export default function Dashboard() {
     return d.toISOString().slice(0, 10)
   }
 
-  const fetchHistory = (dateParam?: string | null, page = historyPage, pageSize = historyPageSize) => {
-    const token = localStorage.getItem('token')
+  const fetchHistory = async (dateParam?: string | null, page = historyPage, pageSize = historyPageSize) => {
     const date = (dateParam ?? historyFilterDate) || getLocalDateString()
     const tzOffset = new Date().getTimezoneOffset() // minutes offset: UTC - local (VN ~ -420)
-    return fetch(`/api/email/history?date=${date}&tz=${tzOffset}&page=${page}&pageSize=${pageSize}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => { setHistoryItems(data.items || []); setHistoryTotal(data.total || 0); setHistoryPage(data.page || 1); setHistoryPageSize(data.pageSize || pageSize) })
-      .catch(() => setHistoryItems([]))
+    try {
+      const response = await apiClient.get(`/api/email/history?date=${date}&tz=${tzOffset}&page=${page}&pageSize=${pageSize}`)
+      if (response.data) {
+        setHistoryItems(response.data.items || [])
+        setHistoryTotal(response.data.total || 0)
+        setHistoryPage(response.data.page || 1)
+        setHistoryPageSize(response.data.pageSize || pageSize)
+      }
+    } catch (error) {
+      setHistoryItems([])
+    }
   }
 
   // Fetch when date changes
@@ -301,13 +298,11 @@ export default function Dashboard() {
 
   // Khi load trang (hoặc F5), khôi phục job gần nhất để UI nắm trạng thái
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    fetch('/api/email/jobs', { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data.jobs)) {
+    apiClient.get('/api/email/jobs')
+      .then(response => {
+        if (response.data?.jobs && Array.isArray(response.data.jobs)) {
           // map các job đã hoàn thành vào emailHistory để UI xem nhanh
-          const mapped = data.jobs.map((j: any) => ({
+          const mapped = response.data.jobs.map((j: any) => ({
             id: j._id,
             timestamp: j.createdAt,
             results: j.results,
@@ -331,16 +326,13 @@ export default function Dashboard() {
         .filter(Boolean)
 
       if (idsToDelete.length > 0) {
-        const token = localStorage.getItem('token')
-        await fetch('/api/recipients/bulk-delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ ids: idsToDelete })
-        })
+        await apiClient.post('/api/recipients/bulk-delete', { ids: idsToDelete })
         // Reload current page
-        await fetch(`/api/recipients?page=${serverPage}&pageSize=${serverPageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }).then(res => res.json()).then(data => { setServerData(data.items); setTotalServer(data.total) })
+        const response = await apiClient.get(`/api/recipients?page=${serverPage}&pageSize=${serverPageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`)
+        if (response.data) {
+          setServerData(response.data.items)
+          setTotalServer(response.data.total)
+        }
       }
 
       setSelectedRowKeys([])
@@ -367,25 +359,31 @@ export default function Dashboard() {
   }
 
   const refreshRecipients = async (page: number, pageSize = serverPageSize) => {
-    const token = localStorage.getItem('token')
-    const res = await fetch(`/api/recipients?page=${page}&pageSize=${pageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    const data = await res.json()
-    setServerData(data.items || [])
-    setTotalServer(data.total || 0)
-    setServerPage(page)
-    return data
+    try {
+      const response = await apiClient.get(`/api/recipients?page=${page}&pageSize=${pageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`)
+      if (response.data) {
+        setServerData(response.data.items || [])
+        setTotalServer(response.data.total || 0)
+        setServerPage(page)
+        return response.data
+      }
+    } catch (error) {
+      console.error('Failed to refresh recipients:', error)
+      return { items: [], total: 0 }
+    }
   }
 
   // Fetch recipients when search query changes (debounce light)
   useEffect(() => {
     const t = setTimeout(() => {
-      fetch(`/api/recipients?page=1&pageSize=${serverPageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      })
-        .then(res => res.json())
-        .then(data => { setServerData(data.items); setTotalServer(data.total); setServerPage(1) })
+      apiClient.get(`/api/recipients?page=1&pageSize=${serverPageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`)
+        .then(response => {
+          if (response.data) {
+            setServerData(response.data.items)
+            setTotalServer(response.data.total)
+            setServerPage(1)
+          }
+        })
         .catch(() => {})
     }, 300)
     return () => clearTimeout(t)
@@ -520,17 +518,13 @@ export default function Dashboard() {
           onConfirm={async () => {
             // Nếu có id (serverData), gọi API; nếu không, xóa khỏi excelData state
             if (record._id) {
-              const token = localStorage.getItem('token')
-              await fetch(`/api/recipients/${record._id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
-              })
+              await apiClient.delete(`/api/recipients/${record._id}`)
               // refresh server list
-              fetch(`/api/recipients?page=${serverPage}&pageSize=${serverPageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              })
-                .then(res => res.json())
-                .then(data => { setServerData(data.items); setTotalServer(data.total) })
+              const response = await apiClient.get(`/api/recipients?page=${serverPage}&pageSize=${serverPageSize}${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`)
+              if (response.data) {
+                setServerData(response.data.items)
+                setTotalServer(response.data.total)
+              }
             } else {
               handleDeleteRecord(index)
             }
@@ -693,11 +687,7 @@ export default function Dashboard() {
                             const token = localStorage.getItem('token')
                             const ids = selectedRowKeys.filter(k => typeof k === 'string') as string[]
                             if (ids.length === 0) return
-                            const resp = await fetch('/api/recipients/bulk-delete', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                              body: JSON.stringify({ ids })
-                            })
+                            const resp = await apiClient.post('/api/recipients/bulk-delete', { ids })
                             setSelectedRowKeys([])
                             // Tải lại đúng trang; nếu trang trống thì lùi về trang trước
                             const data = await refreshRecipients(serverPage)
@@ -744,12 +734,14 @@ export default function Dashboard() {
                     pageSize: serverPageSize,
                     total: serverData.length > 0 ? totalServer : excelData.length,
                     showSizeChanger: true,
-                     pageSizeOptions: [10, 20, 50, 100, 200],
+                    pageSizeOptions: [10, 20, 50, 100, 200],
                     showQuickJumper: false,
                     showTotal: (total, range) =>
                       `${range[0]}-${range[1]} / ${total}`,
                     size: 'small',
                     responsive: true,
+                    showLessItems: false,
+                    hideOnSinglePage: false,
                     onChange: async (page, pageSize) => {
                       setServerPage(page)
                       setServerPageSize(pageSize)

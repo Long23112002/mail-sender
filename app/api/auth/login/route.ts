@@ -40,20 +40,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Tạo JWT token
-    const token = jwt.sign(
+           const token = jwt.sign(
+         {
+           userId: user._id.toString(),
+           username: user.username,
+           email: user.email,
+           role: user.role
+         },
+         process.env.JWT_SECRET || 'fallback-secret',
+         { expiresIn: '24h' }
+       )
+
+    // Tạo refresh token
+    const refreshToken = jwt.sign(
       { 
-        userId: user._id.toString(), 
-        username: user.username,
-        email: user.email,
-        role: user.role 
+        userId: user._id.toString(),
+        type: 'refresh'
       },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '24h' }
+      process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+      { expiresIn: '7d' }
     )
 
     return NextResponse.json({
       message: 'Đăng nhập thành công',
       token,
+      refreshToken,
       user: { 
         id: user._id,
         username: user.username,

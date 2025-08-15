@@ -1,22 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
 import connectDB from '@/lib/mongodb'
 import Template from '@/models/Template'
-
-// Hàm xác thực token
-function verifyToken(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader) {
-    throw new Error('Token không được cung cấp')
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  try {
-    return jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
-  } catch (error) {
-    throw new Error('Token không hợp lệ')
-  }
-}
+import { verifyToken, handleAuthError } from '@/lib/auth'
 
 // GET - Lấy danh sách templates
 export async function GET(request: NextRequest) {
@@ -35,11 +20,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ templates })
 
   } catch (error) {
-    console.error('Get templates error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Có lỗi xảy ra' },
-      { status: 500 }
-    )
+    return handleAuthError(error)
   }
 }
 
@@ -73,10 +54,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Tạo template thành công', template })
 
   } catch (error) {
-    console.error('Create template error:', error)
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Có lỗi xảy ra' },
-      { status: 500 }
-    )
+    return handleAuthError(error)
   }
 }

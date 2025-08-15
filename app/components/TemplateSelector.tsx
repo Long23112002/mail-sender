@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import apiClient from '../../lib/apiClient'
 import { 
   Select, 
   Space, 
@@ -95,16 +96,9 @@ export default function TemplateSelector({ onSelectTemplate, sampleData }: Templ
   const fetchTemplates = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/templates', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setTemplates(data.templates)
+      const response = await apiClient.get('/api/templates')
+      if (response.data) {
+        setTemplates(response.data.templates)
       }
     } catch (error) {
       console.error('Error fetching templates:', error)

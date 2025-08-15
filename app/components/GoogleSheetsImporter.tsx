@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import apiClient from '../../lib/apiClient'
 import { Input, Button, Alert, message, Space } from 'antd'
 import { GoogleOutlined, LinkOutlined, DownloadOutlined } from '@ant-design/icons'
 
@@ -88,7 +89,7 @@ export default function GoogleSheetsImporter({ onDataLoaded }: GoogleSheetsImpor
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          // Authorization header sẽ được thêm tự động bởi apiClient
         },
         body: JSON.stringify({ csvUrl }),
       })
