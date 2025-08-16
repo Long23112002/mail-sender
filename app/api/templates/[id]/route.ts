@@ -29,15 +29,12 @@ export async function GET(
 
     const template = await Template.findOne({
       _id: params.id,
-      $or: [
-        { userId: user.userId },
-        { isPublic: true }
-      ]
+      userId: user.userId // Chỉ user hiện tại mới được truy cập
     }).populate('userId', 'username fullName')
 
     if (!template) {
       return NextResponse.json(
-        { message: 'Không tìm thấy template' },
+        { message: 'Không tìm thấy template hoặc bạn không có quyền truy cập' },
         { status: 404 }
       )
     }
@@ -62,7 +59,7 @@ export async function PUT(
     await connectDB()
     const user = verifyToken(request)
 
-    const { name, description, subject, content, isPublic, tags } = await request.json()
+    const { name, description, subject, content, tags } = await request.json()
 
     const template = await Template.findOne({
       _id: params.id,
@@ -80,7 +77,6 @@ export async function PUT(
     template.description = description || template.description
     template.subject = subject || template.subject
     template.content = content || template.content
-    template.isPublic = isPublic !== undefined ? isPublic : template.isPublic
     template.tags = tags || template.tags
 
     await template.save()

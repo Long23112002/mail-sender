@@ -6,7 +6,6 @@ export interface ITemplate extends Document {
   description: string
   subject: string
   content: string
-  isPublic: boolean
   userId: mongoose.Types.ObjectId
   tags: string[]
   createdAt: Date
@@ -35,10 +34,6 @@ const TemplateSchema = new Schema<ITemplate>({
     type: String,
     required: true
   },
-  isPublic: {
-    type: Boolean,
-    default: false
-  },
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
@@ -55,7 +50,6 @@ const TemplateSchema = new Schema<ITemplate>({
 
 // Indexes
 TemplateSchema.index({ userId: 1 })
-TemplateSchema.index({ isPublic: 1 })
 TemplateSchema.index({ tags: 1 })
 
 // Tránh lỗi "Schema hasn't been registered" trong Next.js

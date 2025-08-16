@@ -3,15 +3,13 @@
 import { useState, useEffect } from "react"
 import apiClient from "../../lib/apiClient"
 import dynamic from "next/dynamic"
-import { List, Button, Modal, Form, Input, Switch, Tag, Popconfirm, message, Typography, Divider } from "antd"
+import { List, Button, Modal, Form, Input, Tag, Popconfirm, message, Typography, Divider } from "antd"
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
   FileTextOutlined,
-  GlobalOutlined,
-  LockOutlined,
 } from "@ant-design/icons"
 
 const { TextArea } = Input
@@ -30,7 +28,6 @@ interface Template {
   description: string
   subject: string
   content: string
-  isPublic: boolean
   tags: string[]
   userId: {
     username: string
@@ -47,25 +44,12 @@ interface TemplateManagerProps {
 
 export default function TemplateManager({ onSelectTemplate, sampleData, onTemplatesChanged }: TemplateManagerProps) {
   const [templates, setTemplates] = useState<Template[]>([])
-  const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([])
-  const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'public' | 'private'>('all')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
   const [form] = Form.useForm()
-
-  // Filter templates based on visibility
-  useEffect(() => {
-    if (visibilityFilter === 'all') {
-      setFilteredTemplates(templates)
-    } else if (visibilityFilter === 'public') {
-      setFilteredTemplates(templates.filter(t => t.isPublic))
-    } else if (visibilityFilter === 'private') {
-      setFilteredTemplates(templates.filter(t => !t.isPublic))
-    }
-  }, [templates, visibilityFilter])
 
   // Function to replace variables for preview (only use real data if available)
   const replaceVariablesForPreview = (template: string) => {
@@ -215,10 +199,6 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
       })
     } else {
       form.resetFields()
-      // Mặc định template mới là private
-      form.setFieldsValue({
-        isPublic: false
-      })
     }
     setModalOpen(true)
   }
@@ -236,38 +216,9 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
             Template Library
           </Text>
           
-          {/* Filter Controls */}
-          <div className="flex items-center gap-2">
-            <Text className="text-sm text-gray-600">Lọc theo:</Text>
-            <div className="flex gap-1">
-              <Button
-                size="small"
-                type={visibilityFilter === 'all' ? 'primary' : 'default'}
-                onClick={() => setVisibilityFilter('all')}
-                className="text-xs px-2"
-              >
-                Tất cả
-              </Button>
-              <Button
-                size="small"
-                type={visibilityFilter === 'public' ? 'primary' : 'default'}
-                onClick={() => setVisibilityFilter('public')}
-                className="text-xs px-2"
-                icon={<GlobalOutlined />}
-              >
-                Public
-              </Button>
-              <Button
-                size="small"
-                type={visibilityFilter === 'private' ? 'primary' : 'default'}
-                onClick={() => setVisibilityFilter('private')}
-                className="text-xs px-2"
-                icon={<LockOutlined />}
-              >
-                Private
-              </Button>
-            </div>
-          </div>
+          <Text className="text-sm text-gray-600">
+            Quản lý template email của bạn
+          </Text>
         </div>
         
         <Button
@@ -283,7 +234,7 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
 
       <List
         loading={loading}
-        dataSource={filteredTemplates}
+        dataSource={templates}
         size="small"
         className="w-full"
         locale={{
@@ -291,12 +242,7 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
             <div className="text-center py-8">
               <FileTextOutlined className="text-4xl text-gray-300 mb-2" />
               <div className="text-gray-500">
-                {visibilityFilter === 'all' 
-                  ? 'Chưa có template nào' 
-                  : visibilityFilter === 'public' 
-                    ? 'Không có template public nào' 
-                    : 'Không có template private nào'
-                }
+                Chưa có template nào. Hãy tạo template đầu tiên!
               </div>
             </div>
           )
@@ -353,15 +299,6 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
                     >
                       {template.name}
                     </span>
-                    {template.isPublic ? (
-                      <Tag color="green" icon={<GlobalOutlined />} className="flex-shrink-0">
-                        Public
-                      </Tag>
-                    ) : (
-                      <Tag color="orange" icon={<LockOutlined />} className="flex-shrink-0">
-                        Private
-                      </Tag>
-                    )}
                   </div>
                 </div>
 
@@ -476,23 +413,6 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
             <Input placeholder="vd: business, notification, welcome" className="w-full" />
           </Form.Item>
 
-          <Form.Item name="isPublic" label="Công khai" valuePropName="checked">
-            <Switch 
-              checkedChildren={
-                <span className="flex items-center gap-1">
-                  <GlobalOutlined />
-                  Public
-                </span>
-              } 
-              unCheckedChildren={
-                <span className="flex items-center gap-1">
-                  <LockOutlined />
-                  Private
-                </span>
-              }
-            />
-          </Form.Item>
-
           <Form.Item className="mb-0">
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <Button type="primary" htmlType="submit" className="w-full sm:w-auto">
@@ -536,20 +456,6 @@ export default function TemplateManager({ onSelectTemplate, sampleData, onTempla
               </Text>
             </div>
             <Divider />
-
-            {/* Debug info */}
-            {/* <div
-              className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs break-words"
-              style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
-            >
-              <strong>Debug:</strong>
-              <div>Template content type: {typeof previewTemplate.content}</div>
-              <div>Template content length: {previewTemplate.content?.length || 0}</div>
-              <div>Sample data: {JSON.stringify(sampleData)}</div>
-              <div className="break-words" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>
-                First 100 chars: {previewTemplate.content?.substring(0, 100)}...
-              </div>
-            </div> */}
 
             <div
               className="w-full break-words"

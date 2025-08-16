@@ -10,6 +10,7 @@
 - 🎨 Template email với biến động
 - 📋 Danh sách kết quả gửi email
 - 🎯 Giao diện đẹp và thân thiện
+- ⏰ Tự động reset quota hàng ngày lúc 00:00
 
 ## Cài đặt
 
@@ -35,6 +36,9 @@ JWT_SECRET=your-super-secret-jwt-key-here
 # NextAuth
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-nextauth-secret-here
+
+# MongoDB URI
+MONGODB_URI=mongodb://localhost:27017/your-database
 ```
 
 ## Hướng dẫn cấu hình Email
@@ -86,6 +90,43 @@ Sử dụng các biến sau trong template:
 </body>
 </html>
 ```
+
+## Hệ thống Template
+
+### Quản lý Template
+- Mỗi người dùng chỉ có thể tạo, chỉnh sửa và sử dụng template của mình
+- Template không còn phân biệt public/private
+- Tất cả template đều thuộc về user đã tạo ra
+
+### Migration Database
+Nếu bạn đang nâng cấp từ phiên bản cũ có trường `isPublic`, chạy script sau để xóa trường này:
+
+```bash
+node scripts/remove-isPublic-field.js
+```
+
+## Hệ thống Quota
+
+### Tự động Reset Hàng Ngày
+- **Quota mặc định**: 500 email/ngày cho mỗi email config
+- **Tự động reset**: Lúc 00:00 mỗi ngày, `dailySent` sẽ được reset về 0
+- **Không cần thao tác thủ công**: Hệ thống tự động quản lý
+
+### Kiểm tra và Test
+```bash
+# Kiểm tra trạng thái quota hiện tại
+node scripts/test-quota-scheduler.js
+
+# Test reset quota ngay lập tức
+node scripts/test-reset-quota.js
+```
+
+### Logs
+Quota scheduler sẽ log các hoạt động:
+- ⏰ Lịch reset tiếp theo
+- ✅ Kết quả reset
+- 🔄 Thiết lập interval hàng ngày
+- ❌ Lỗi nếu có
 
 ## Khởi tạo dữ liệu
 

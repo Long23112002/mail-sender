@@ -3,18 +3,15 @@ import connectDB from '@/lib/mongodb'
 import Template from '@/models/Template'
 import { verifyToken, handleAuthError } from '@/lib/auth'
 
-// GET - Lấy danh sách templates
+// GET - Lấy danh sách templates của user hiện tại
 export async function GET(request: NextRequest) {
   try {
     await connectDB()
     const user = verifyToken(request)
 
-    // Lấy templates của user và public templates
+    // Chỉ lấy templates của user hiện tại
     const templates = await Template.find({
-      $or: [
-        { userId: user.userId },
-        { isPublic: true }
-      ]
+      userId: user.userId
     }).populate('userId', 'username fullName').sort({ createdAt: -1 })
 
     return NextResponse.json({ templates })
@@ -30,7 +27,7 @@ export async function POST(request: NextRequest) {
     await connectDB()
     const user = verifyToken(request)
 
-    const { name, description, subject, content, isPublic, tags } = await request.json()
+    const { name, description, subject, content, tags } = await request.json()
 
     if (!name || !subject || !content) {
       return NextResponse.json(
@@ -44,7 +41,6 @@ export async function POST(request: NextRequest) {
       description,
       subject,
       content,
-      isPublic: isPublic || false,
       userId: user.userId,
       tags: tags || []
     })

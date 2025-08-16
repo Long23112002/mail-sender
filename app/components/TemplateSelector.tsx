@@ -16,8 +16,6 @@ import {
 import { 
   FileTextOutlined, 
   EyeOutlined,
-  GlobalOutlined,
-  LockOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons'
 
@@ -29,7 +27,6 @@ interface Template {
   description: string
   subject: string
   content: string
-  isPublic: boolean
   tags: string[]
   userId: {
     username: string
@@ -126,14 +123,6 @@ export default function TemplateSelector({ onSelectTemplate, sampleData }: Templ
     setPreviewModalOpen(true)
   }
 
-  const getTemplateIcon = (template: Template) => {
-    return template.isPublic ? (
-      <GlobalOutlined className="text-green-500" />
-    ) : (
-      <LockOutlined className="text-orange-500" />
-    )
-  }
-
   return (
     <div>
       <Space direction="vertical" className="w-full" size="middle">
@@ -179,7 +168,6 @@ export default function TemplateSelector({ onSelectTemplate, sampleData }: Templ
                 <Space>
                   <FileTextOutlined className="text-blue-500" />
                   <span>{template.name}</span>
-                  {getTemplateIcon(template)}
                   {template.tags.slice(0, 2).map(tag => (
                     <Tag key={tag} color="blue">{tag}</Tag>
                   ))}
@@ -211,9 +199,8 @@ export default function TemplateSelector({ onSelectTemplate, sampleData }: Templ
                       {selectedTemplate.name}
                     </Text>
                     <div className="flex items-center gap-1 mt-1">
-                      {getTemplateIcon(selectedTemplate)}
                       <Text type="secondary" className="text-xs">
-                        {selectedTemplate.isPublic ? 'Public template' : 'Private template'}
+                        Template của bạn
                       </Text>
                     </div>
                   </div>
